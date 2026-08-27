@@ -179,12 +179,28 @@ in
 
         root = cfg.coverSite;
 
-        locations.${cfg.path} = {
+        # Exact match, not a prefix. A prefix would also hand /<path>anything
+        # to the transport, which is both wrong and a way to probe for the
+        # bridge by guessing suffixes.
+        locations."= ${cfg.path}" = {
           proxyPass = "http://127.0.0.1:${toString cfg.transportPort}";
-          # The transport speaks HTTP Upgrade; without this nginx terminates
-          # the connection instead of handing it over and the bridge is
-          # reachable but useless.
+          # The transport speaks HTTP Upgrade. This emits the three lines
+          # upstream's own guide specifies -- proxy_http_version 1.1, and
+          # Upgrade/Connection headers -- passing through whatever upgrade
+          # token the client sends rather than assuming websocket.
           proxyWebsockets = true;
+          extraConfig = ''
+            # Do not log the people using the bridge. Without this nginx
+            # records the source address of every censored user who connects,
+            # and writes it to a disk that can be seized. Upstream's guide
+            # turns both logs off here for the same reason.
+            access_log off;
+            error_log /dev/null;
+
+            # Upstream sets this so content negotiation cannot interfere with
+            # the upgraded connection.
+            proxy_set_header Accept-Encoding "";
+          '';
         };
       };
     };

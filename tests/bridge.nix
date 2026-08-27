@@ -60,6 +60,13 @@ pkgs.testers.runNixOSTest {
     with subtest("tor holds an identity, and it is the thing migration must preserve"):
         bridge.succeed("test -s /var/lib/tor/keys/ed25519_master_id_secret_key")
 
+    with subtest("the transport path is not logged"):
+        bridge.succeed(
+            "curl -sk --resolve ${domain}:443:127.0.0.1 "
+            "https://${domain}/vRsQ4Nk2 -o /dev/null || true"
+        )
+        bridge.fail("grep -q vRsQ4Nk2 /var/log/nginx/access.log")
+
     with subtest("the ORPort is not reachable from outside"):
         bridge.fail("${pkgs.iproute2}/bin/ss -ltn | grep -q '0.0.0.0:9001'")
   '';
