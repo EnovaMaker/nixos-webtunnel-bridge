@@ -5,7 +5,16 @@ let
 in
 {
   options.services.tor-webtunnel-bridge = {
-    enable = lib.mkEnableOption "a Tor WebTunnel bridge relay behind nginx";
+    enable = lib.mkEnableOption ''
+      a Tor WebTunnel bridge relay behind nginx.
+
+      Upstream's requirements apply and are worth reading before deploying:
+      a static IPv4 address, the ability to expose TCP ports, a domain under
+      your control with a valid TLS certificate, and **at least 1 GB of RAM,
+      with 4 GB recommended**. A 512 MB host will start this and then have
+      Tor killed under load, which looks like an intermittent bridge rather
+      than an undersized one
+    '';
 
     domain = lib.mkOption {
       type = lib.types.str;

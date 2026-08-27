@@ -79,12 +79,28 @@ If you run this, run it as an experiment.
 
 ## Requirements
 
-- A domain you control. It becomes public — it goes in the bridge line handed to users — and
-  it will eventually be blocked somewhere, which is what happens to a bridge that works. Do
-  not use a domain you need for anything else.
-- A host whose provider permits Tor **bridge** relays. A bridge is not an exit node and
-  attracts none of an exit's abuse reports, but confirm it rather than assume it.
-- Port 443 reachable.
+From [upstream's setup guide](https://community.torproject.org/relay/setup/webtunnel/), plus
+what running one actually costs:
+
+- **A domain you control.** It becomes public — it goes in the bridge line handed to users — and
+  it will eventually be blocked somewhere, which is what happens to a bridge that works. Do not
+  use a domain you need for anything else.
+- **A valid TLS certificate.** Obtained automatically unless you set `acme.enable = false`.
+- **At least 1 GB of RAM, 4 GB recommended.** A 512 MB host will start this and then have Tor
+  killed under memory pressure, which presents as an intermittent bridge rather than an
+  undersized one.
+- **A static IPv4 address**, preferably, and port 443 reachable.
+- **A host whose provider permits Tor bridge relays.** A bridge is not an exit node and attracts
+  none of an exit's abuse reports, but confirm it in writing rather than assume it: some
+  otherwise unremarkable providers prohibit Tor outright.
+
+### On choosing where to run it
+
+Wang and Cho ([FOCI 2026](https://www.petsymposium.org/foci/2026/foci-2026-0014.php)) measured
+transit concentration in Tor and found five ASes carrying over half of exit probability. Adding
+capacity to an already dominant network makes that worse. If two providers are otherwise equal,
+prefer the one that is under-represented — [OrNetStats](https://nusenu.github.io/OrNetStats/)
+shows the current distribution.
 
 ## Testing
 
