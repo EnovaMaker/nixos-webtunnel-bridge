@@ -55,9 +55,17 @@ in
 
     orPort = lib.mkOption {
       type = lib.types.port;
-      default = 9001;
+      default = 19001;
       description = ''
         Tor's ORPort, bound to loopback.
+
+        Deliberately not 9001. On a WebTunnel bridge this port never faces the
+        network, so upstream's "avoid 9001" instruction -- which exists because
+        scanning the canonical Tor port finds bridges -- does not strictly
+        apply here. It is avoided anyway, for two reasons: if this port is ever
+        exposed by a misconfiguration or a later change, 9001 announces what it
+        is, and an obfs4 bridge on the same operator's other host must avoid it
+        for real, so keeping one rule is simpler than keeping two.
 
         It is deliberately not reachable from outside. Users arrive over 443
         and the transport hands them to Tor locally, so nothing needs to reach

@@ -2,6 +2,7 @@
 
 let
   domain = "bridge.test";
+  orPort = 19001;
 
   # No public domain exists inside a test VM, so ACME cannot run here. This is
   # the reason the module carries acme.enable at all: without an escape hatch
@@ -26,6 +27,7 @@ pkgs.testers.runNixOSTest {
       inherit domain;
       path = "/vRsQ4Nk2";
       contactInfo = "ops@bridge.test";
+      inherit orPort;
       acme.enable = false;
       tls.certFile = "${selfSigned}/cert.pem";
       tls.keyFile = "${selfSigned}/key.pem";
@@ -84,7 +86,19 @@ pkgs.testers.runNixOSTest {
         ]:
             assert needed in torrc, "torrc is missing: " + needed
 
-    with subtest("the ORPort is not reachable from outside"):
-        bridge.fail("${pkgs.iproute2}/bin/ss -ltn | grep -q '0.0.0.0:9001'")
+    with subtest("the ORPort listens on loopback and nowhere else"):
+        # Asserting only that 0.0.0.0 is absent would also pass if Tor failed
+        # to bind at all, so assert the positive first.
+        # The port comes from the module's own option rather than a literal,
+        # so changing the default cannot silently turn this into a test of
+        # nothing.
+        bridge.wait_until_succeeds(
+            "${pkgs.iproute2}/bin/ss -ltn | grep -q '127.0.0.1:${toString orPort}'",
+            timeout=60,
+        )
+        bridge.fail("${pkgs.iproute2}/bin/ss -ltn | grep -q '0.0.0.0:${toString orPort}'")
+
+    with subtest("torrc pins the ORPort to loopback explicitly"):
+        assert "ORPort 127.0.0.1:${toString orPort}" in torrc, "ORPort is not bound to loopback"
   '';
 }
