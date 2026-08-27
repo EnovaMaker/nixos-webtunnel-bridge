@@ -67,6 +67,23 @@ pkgs.testers.runNixOSTest {
         )
         bridge.fail("grep -q vRsQ4Nk2 /var/log/nginx/access.log")
 
+    with subtest("the generated torrc matches upstream's required settings"):
+        # NixOS generates the torrc into the store and passes it with -f,
+        # so find it from the unit rather than guessing a path.
+        torrc = bridge.succeed(
+            "cat $(systemctl show tor.service -p ExecStart --value "
+            "| tr ' ' '\n' | grep -A1 -- '-f' | tail -1)"
+        )
+        for needed in [
+            "BridgeRelay 1",
+            "AssumeReachable 1",
+            "ExtORPort auto",
+            "ServerTransportPlugin webtunnel",
+            "ServerTransportListenAddr webtunnel 127.0.0.1:15000",
+            "ServerTransportOptions webtunnel url=https://bridge.test/vRsQ4Nk2",
+        ]:
+            assert needed in torrc, "torrc is missing: " + needed
+
     with subtest("the ORPort is not reachable from outside"):
         bridge.fail("${pkgs.iproute2}/bin/ss -ltn | grep -q '0.0.0.0:9001'")
   '';

@@ -158,6 +158,17 @@ in
         # scanning the host the cover site exists to make unremarkable.
         ORPort = [{ addr = "127.0.0.1"; port = cfg.orPort; }];
         ExtORPort.port = "auto";
+
+        # Required, not optional. With the ORPort on loopback, Tor's own
+        # reachability self-test cannot succeed: it tries to reach that port
+        # from outside and never will. Without this the bridge decides it is
+        # unreachable and never publishes its descriptor, so it exists and
+        # serves nobody. Upstream's own torrc sets it for exactly this reason.
+        AssumeReachable = true;
+
+        # A bridge has no use for a local SOCKS proxy, and an unused open port
+        # is surface for nothing.
+        SocksPort = [ "0" ];
         ServerTransportPlugin = {
           transports = [ "webtunnel" ];
           exec = "${pkgs.webtunnel}/bin/server";
