@@ -110,6 +110,28 @@ capacity to an already dominant network makes that worse. If two providers are o
 prefer the one that is under-represented — [OrNetStats](https://nusenu.github.io/OrNetStats/)
 shows the current distribution.
 
+## When it looks broken, suspect the network
+
+A bridge that works is one a censor eventually blocks. That is stated above as a fact about the
+domain, but it has a harder corollary for whoever runs it: **on a network that interferes, a
+working deployment and a broken one look the same from the inside.**
+
+| What you see | Could be this module | Could be the network |
+|---|---|---|
+| A domain resolves that was never registered | — | the resolver rewrites NXDOMAIN |
+| ACME issuance fails | wrong path, or 443 unreachable | DNS answers rewritten, or 80 filtered |
+| Cover site loads, clients still cannot connect | wrong `path`, transport not running | the path or SNI filtered upstream |
+| Reachable from one network, not another | — | **working as intended — this is what being blocked looks like** |
+
+The last row is the one that costs time. Every instinct says a tool that fails for some users is
+faulty; here it is the tool doing its job and meeting the thing it exists to defeat. Before
+changing configuration, reproduce from a second network you control, and check the bridge's own
+logs rather than the client's symptoms.
+
+This cuts both ways for the operator's own machine. The resolver note under Requirements is the
+mild version: interference that is not hostile, just commercial, and it still sends you chasing
+the wrong fault.
+
 ## Testing
 
 ```console
