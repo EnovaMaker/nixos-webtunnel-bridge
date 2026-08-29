@@ -119,6 +119,49 @@ in
       };
     };
 
+    certificateExpiry = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          Warn in the journal when the certificate the bridge is *serving* is
+          close to expiring.
+
+          This reads the certificate back out of the running web server rather
+          than off disk, because the failure that matters is not a certificate
+          that was never renewed -- ACME handles that -- but one that was
+          renewed while the server kept serving the old one. Reading the file
+          cannot tell those apart; asking the server can.
+
+          The Tor Project asked for this check centrally, in tor-weather issue
+          108. It cannot be done centrally: onionoo sanitises bridge addresses,
+          so a central service would have to be told each bridge's domain and
+          would end up holding a list of them. The bridge already has its own
+          certificate, so here it costs nothing.
+        '';
+      };
+
+      warnDays = lib.mkOption {
+        type = lib.types.ints.positive;
+        default = 21;
+        description = ''
+          Warn once the served certificate expires within this many days.
+
+          The default leaves room for several ACME renewal attempts on a
+          90-day certificate before anything is actually wrong.
+        '';
+      };
+
+      interval = lib.mkOption {
+        type = lib.types.str;
+        default = "06:00";
+        example = "*-*-* 06,18:00:00";
+        description = ''
+          When to check, in {manpage}`systemd.time(7)` calendar syntax.
+        '';
+      };
+    };
+
     tls = {
       certFile = lib.mkOption {
         type = lib.types.nullOr lib.types.path;
@@ -230,6 +273,62 @@ in
             proxy_set_header Accept-Encoding "";
           '';
         };
+      };
+    };
+
+    systemd.services.webtunnel-cert-expiry = lib.mkIf cfg.certificateExpiry.enable {
+      description = "Check the certificate the WebTunnel bridge is serving";
+      after = [ "nginx.service" ];
+      requires = [ "nginx.service" ];
+
+      serviceConfig = {
+        Type = "oneshot";
+        DynamicUser = true;
+        # It only opens a loopback connection and reads a date.
+        PrivateDevices = true;
+        ProtectSystem = "strict";
+        ProtectHome = true;
+        NoNewPrivileges = true;
+        RestrictAddressFamilies = [ "AF_INET" "AF_INET6" ];
+      };
+
+      script = ''
+        set -u
+
+        # Ask the running server what it is serving, with the SNI a real
+        # client would send. Reading /var/lib/acme would answer a different
+        # question: what was last obtained, not what is being served.
+        served=$(${pkgs.openssl}/bin/openssl s_client                    -connect 127.0.0.1:443                    -servername ${cfg.domain}                    </dev/null 2>/dev/null || true)
+
+        end=$(printf '%s' "$served"               | ${pkgs.openssl}/bin/openssl x509 -noout -enddate 2>/dev/null               | cut -d= -f2 || true)
+
+        if [ -z "$end" ]; then
+          echo "webtunnel-cert-expiry: could not read a certificate from the"                "server on 127.0.0.1:443 for ${cfg.domain}. The bridge may be"                "unreachable to clients." >&2
+          exit 1
+        fi
+
+        end_epoch=$(${pkgs.coreutils}/bin/date -d "$end" +%s)
+        now_epoch=$(${pkgs.coreutils}/bin/date +%s)
+        days=$(( (end_epoch - now_epoch) / 86400 ))
+
+        if [ "$days" -lt 0 ]; then
+          echo "webtunnel-cert-expiry: the certificate being served for"                "${cfg.domain} EXPIRED $(( -days )) days ago. Clients are"                "failing with x509: certificate has expired." >&2
+          exit 1
+        elif [ "$days" -le ${toString cfg.certificateExpiry.warnDays} ]; then
+          echo "webtunnel-cert-expiry: the certificate being served for"                "${cfg.domain} expires in $days days. If ACME already renewed"                "it, the web server is still serving the old one and needs a"                "reload." >&2
+          exit 1
+        fi
+
+        echo "webtunnel-cert-expiry: serving a certificate for ${cfg.domain}"              "valid for another $days days."
+      '';
+    };
+
+    systemd.timers.webtunnel-cert-expiry = lib.mkIf cfg.certificateExpiry.enable {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = cfg.certificateExpiry.interval;
+        Persistent = true;
+        RandomizedDelaySec = "30m";
       };
     };
 
