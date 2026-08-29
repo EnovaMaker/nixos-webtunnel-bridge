@@ -132,6 +132,27 @@ This cuts both ways for the operator's own machine. The resolver note under Requ
 mild version: interference that is not hostile, just commercial, and it still sends you chasing
 the wrong fault.
 
+### You are not on the network your users are on
+
+The asymmetry is the hard part. **A bridge is run from somewhere it works and used from somewhere
+it does not.** Every diagnostic you can run — curl, dig, the journal, the test suite — describes
+a network that is not the one the bridge exists for. From where you sit it will look healthy long
+after it has stopped being reachable for the people it was set up to serve, because in a censored
+network the local operator is the one deciding what resolves and what connects, and none of that
+is visible from here.
+
+So reachability is the one property you cannot verify yourself:
+
+- **The bridge's own logs are the honest source.** Connections arriving is evidence; anything you
+  probe from outside is not.
+- **[OONI](https://ooni.org/) publishes measurements from inside censored networks.** It will not
+  test your bridge on request, but it shows what is being blocked and how.
+- **Silence is ambiguous.** A bridge with no users may be blocked, or may simply not have been
+  handed out yet by BridgeDB. Do not read either into the other.
+
+Everything else in this README is verifiable from your terminal. This is not, and treating it as
+if it were is how an operator concludes a working bridge is broken and takes it down.
+
 ## Testing
 
 ```console
