@@ -94,6 +94,19 @@ pkgs.testers.runNixOSTest {
         bridge.succeed("test -s /var/lib/tor/keys/ed25519_master_id_secret_key")
 
     with subtest("the transport path is not logged"):
+        # Assert the positive first. `grep -q` returns non-zero on a file that
+        # does not exist, or on a log nginx never wrote to, so the negative
+        # assertion on its own passes whether or not access_log off does
+        # anything -- and it would keep passing if the location block were
+        # deleted tomorrow. Same trap as the ORPort check below, which already
+        # says so. Requesting the cover site proves the log exists and is
+        # being written; wait_until_succeeds covers the flush.
+        bridge.succeed(
+            "curl -sk --resolve ${domain}:443:127.0.0.1 "
+            "https://${domain}/ -o /dev/null"
+        )
+        bridge.wait_until_succeeds("grep -q 'GET / HTTP' /var/log/nginx/access.log")
+
         bridge.succeed(
             "curl -sk --resolve ${domain}:443:127.0.0.1 "
             "https://${domain}/vRsQ4Nk2 -o /dev/null || true"
