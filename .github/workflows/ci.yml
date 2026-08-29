@@ -4,6 +4,13 @@ on:
   push:
     branches: [ main ]
   pull_request:
+  # Also run when nothing changed. A VM test that only ever runs on a push
+  # tells you the suite passed against that commit, not that it passes
+  # reliably -- and the difference between the two is exactly the flakiness
+  # worth finding. Better to learn about it here than to have it surface on
+  # someone else's first visit.
+  schedule:
+    - cron: "0 5 * * *"
 
 jobs:
   check:
