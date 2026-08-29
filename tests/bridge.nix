@@ -147,7 +147,14 @@ pkgs.testers.runNixOSTest {
 
     with subtest("and it warns once the server actually serves the old one"):
         bridge.succeed("systemctl reload nginx.service")
-        bridge.fail("systemctl start webtunnel-cert-expiry.service")
+        # nginx's reload is asynchronous. systemctl returns once systemd has
+        # signalled; the workers already running keep serving the certificate
+        # they hold until they are replaced. Asserting immediately raced with
+        # that and saw the fresh certificate still being served -- the check
+        # was right and the test was wrong. Waiting is not a weaker assertion:
+        # "eventually warns" is the real property, and a module that never
+        # warned would time out here.
+        bridge.wait_until_fails("systemctl start webtunnel-cert-expiry.service")
         journal = bridge.succeed("journalctl -u webtunnel-cert-expiry --no-pager")
         assert "expires in" in journal or "EXPIRED" in journal, journal
 
