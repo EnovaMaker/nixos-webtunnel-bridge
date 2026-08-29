@@ -86,6 +86,14 @@ what running one actually costs:
   it will eventually be blocked somewhere, which is what happens to a bridge that works. Do not
   use a domain you need for anything else.
 - **A valid TLS certificate.** Obtained automatically unless you set `acme.enable = false`.
+- **A resolver that returns errors.** Many consumer ISPs answer a name that does not exist with
+  an address of their own rather than NXDOMAIN — Portugal's NOS hands back `62.169.70.160` for
+  every one. While setting a bridge up that is actively misleading: a record that has not
+  propagated yet, or a domain you never registered, resolves perfectly well, so a failed ACME
+  issuance reads as an ACME problem when it is a DNS one. Check with a resolver that does not
+  rewrite errors — `dig @1.1.1.1 your.domain` — before believing anything about DNS state. The
+  irony is worth noting: intercepting DNS answers is itself one of the cheaper censorship
+  techniques, and here it is running on the operator's own connection.
 - **At least 1 GB of RAM, 4 GB recommended.** A 512 MB host will start this and then have Tor
   killed under memory pressure, which presents as an intermittent bridge rather than an
   undersized one.
