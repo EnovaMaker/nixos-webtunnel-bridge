@@ -55,11 +55,11 @@ $ head -c 9 /dev/urandom | base64 | tr -d '/+=' | sed 's|^|/|'
 
 ## Status
 
-**Early. It works, it is tested, and it is not yet something to trust with anyone's safety.**
+**Prototype. It is not yet something to trust with anyone's safety.**
 
 What is here:
 
-- the module, deploying a complete bridge from one declaration
+- the module, intended to deploy a bridge from one declaration
 - a NixOS VM test covering the plumbing: nginx serves the cover site over TLS, Tor starts and
   registers the transport, the transport listens where nginx proxies to it, Tor holds an
   identity key, and the ORPort is not exposed
